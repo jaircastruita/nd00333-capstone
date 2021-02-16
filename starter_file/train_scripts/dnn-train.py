@@ -187,7 +187,7 @@ def main():
     
     
     model = fine_tune_model(args.num_epochs, args.learning_rate, args.layer1, 
-                            args.num_layer2)
+                            args.layer2)
     
     os.makedirs(args.output_dir, exist_ok=True)
     torch.save(model, os.path.join(args.output_dir, 'model.pt'))
