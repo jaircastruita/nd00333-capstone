@@ -12,6 +12,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score
 
 from azureml.core.run import Run
 
@@ -119,11 +120,11 @@ def train_model(model, optimizer, criterion, num_epochs):
     running_train_loss = []
     running_test_loss = []
     
-    running_train_acc = []
-    running_test_acc = []
+    running_train_metric = []
+    running_test_metric = []
     
     best_model_wts = copy.deepcopy(model.state_dict())
-    best_acc = 0
+    best_metric = 0
     
     for iter in range(num_epochs):
         optimizer.zero_grad()
@@ -136,7 +137,7 @@ def train_model(model, optimizer, criterion, num_epochs):
         _, preds = torch.max(output, 1)
         train_acc = torch.mean((preds == y_train).float())
         
-        running_train_acc.append(train_acc)
+        running_train_metric.append(train_acc)
         running_train_loss.append(train_loss.item())
         
         # scheduler.step()
@@ -150,23 +151,26 @@ def train_model(model, optimizer, criterion, num_epochs):
             test_loss = criterion(output, y_test)
             
             _, preds = torch.max(output, 1)
-            test_acc = torch.mean((preds == y_test).float())
+            # test_acc = torch.mean((preds == y_test).float())
+            auc_weighted = roc_auc_score(y_test.cpu().numpy(), 
+                                         preds.cpu().numpy(), 
+                                         average="weighted")
             
-            running_test_acc.append(test_acc)
+            running_test_metric.append(auc_weighted)
             running_test_loss.append(test_loss.item())
             
-            if test_acc > best_acc:
-                best_acc = test_acc
+            if auc_weighted > best_metric:
+                best_metric = auc_weighted
                 best_model_wts = copy.deepcopy(model.state_dict())
             
         
-        print("Train loss: {}, Test loss: {}".format(running_train_loss[-1], 
-                                                     running_test_loss[-1],))
-        print("Epoch: {}, Train acc: {}, Test acc: {}, Best acc: {}".format(iter + 1,
-                                                                            running_train_acc[-1],
-                                                                            running_test_acc[-1],
-                                                                            best_acc))
-        run.log('best_test_acc', np.float(best_acc))
+        # print("Train loss: {}, Test loss: {}".format(running_train_loss[-1], 
+        #                                              running_test_loss[-1],))
+        # print("Epoch: {}, Train metric: {}, Test metric: {}, Best metric: {}".format(iter + 1,
+        #                                                                               running_train_metric[-1],
+        #                                                                               running_test_metric[-1],
+        #                                                                               best_metric))
+        run.log('best_test_acc', np.float(best_metric))
         
     model.load_state_dict(best_model_wts)
     return model
