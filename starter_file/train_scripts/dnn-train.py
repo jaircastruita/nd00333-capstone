@@ -52,7 +52,7 @@ class DnnClassifier(nn.Module):
         
         return out
     
-def load_data(data_path="../data/WA_Fn-UseC_-HR-Employee-Attrition.csv"):
+def load_data(data_path="https://raw.githubusercontent.com/jaircastruita/nd00333-capstone/master/starter_file/data/WA_Fn-UseC_-HR-Employee-Attrition.csv"):
     df = pd.read_csv(data_path, index_col="EmployeeNumber")
 
     return df
