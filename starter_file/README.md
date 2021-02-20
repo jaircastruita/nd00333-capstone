@@ -1,40 +1,47 @@
 # Employee attrition prediction project
 
-This project consist in comparing and selecting 2 different approaches to solve a usual problem of best model selection for certain dataset. The dataset selected for this project will be the *employee attrition* dataset, a toy dataset made by the IBM data scientists with the purpose of predictor's explanation. For more info about this dataset you can follow this [link](https://www.kaggle.com/pavansubhasht/ibm-hr-analytics-attrition-dataset).
+This project consist in comparing and selecting between 2 different approaches to solve a usual problem of best model selection. The dataset selected for this project will be the *employee attrition* dataset, a toy dataset made by the IBM data scientists with the purpose of predictor's explanation. For more info about this dataset you can follow this [link](https://www.kaggle.com/pavansubhasht/ibm-hr-analytics-attrition-dataset).
 
 The workflow of this project will be the following: First upload the dataset of employee attrition into the azureml workspace. Use hyperdrive (fixed model/moving hyperparameters) and automl (moving model/moving hyperparameters) with the data attrition dataset and compare the best performing models resulting of both azure ml tools. Register, deployment and consumption of such model will be followed once the best performing model is identified.
 
 ![capstone image](images/capstone-diagram.png)
 
-## Project Set Up and Installation
-*OPTIONAL:* If your project has any special installation steps, this is where you should put it. To turn this project into a professional portfolio project, you are encouraged to explain how to set up this project in AzureML.
-
 ## Dataset
 
 ### Overview
-The dataset used for this project is the employee attrition dataset, from kaggle; The data in this dataset is completely simulated, so there is no violation to individual's right to privacy.
+The dataset used for this project is the employee attrition dataset, from kaggle; The dataset is completely simulated, so there is no violation to individual's right to privacy.
+
+This dataset is formed of 35 columns: 26 integer columns, 6 categorical columns and 3 binary columns which simulates traits for each employee. Each row represents a different employee.
 
 ### Task
 
-This dataset is formed of 35 columns: 26 integer columns, 6 categorical columns and 3 binary columns which simulates traits for each employee. Each row represents a different employee and the main objective is to find relations between the dependent variable (**Attrition**) and the remaining columns. For this project the main purpose is to build a model that predicts Attrition given a predictor's vector and maybe identify which columns have more influence in the predicted result.
+The main objective is to find relations between the dependent variable (**Attrition**) and the remaining columns given a predictor's vector and maybe identify which columns have more influence in the predicted result.
 
-### Access
+### Load the dataset
 
-First, the dataset load is made by using the azureml TabularDataset method *from_delimited_files* and passing the CSV file path as an argument. This cell is present in both notebooks.
+First, a dataset different than the current ones that exist in azureml has to be stored & loaded. In order to do this we use the azure portal to load the attrition dataset. Under the *datasets* section we select to create a new dataset with the name of *attrition-dataset* and specify some needed attributes for such dataset.
+
+![dataset-upload](images/project-3/attrition-ds-upload.PNG)
+
+This part is also useful to check that the correct data type was assigned to each column:
+
+![column-types](images/project-3/attrition-ds-upload-2.PNG)
+
+### Access the dataset
+
+To access the dataset from the notebook we have to use the *get_by_name* method from the Dataset class. This cell is present in both notebooks.
 
 ```python
-data_path = "https://raw.githubusercontent.com/jaircastruita/nd00333-capstone/master/starter_file/data/WA_Fn-UseC_-HR-Employee-Attrition.csv"
-
-ibm_ds = Dataset.Tabular.from_delimited_files(path=data_path)
+ibm_ds = Dataset.get_by_name(ws, 'attrition-dataset')
 ```
 
-After executing this cell a TabularDataset is returned. This dataset will be necessary when training and consuming our future model and model as a service.
+After executing this cell a TabularDataset object is returned. This dataset will be necessary when training and consuming our future model/endpoint.
 
 ## Automated ML
 
-Given the tabular nature of the selected dataset with categorical and numeric columns present, relatively few observations with respect the number of columns, the following settings were selected in the automl configuration:
+Given the tabular nature of the selected dataset: categorical and numeric columns are present, relatively few observations with respect the number of columns, the following settings were selected in the automl configuration:
 
-- *iteration_timeout_minutes* to 20, just to make sure the experiment will finish in a feasible time
+- *iteration_timeout_minutes* to 30, just to make sure the experiment will finish in a feasible time
 - *enable_early_stopping* to True in order to not waste resources when the model performance is not improving anymore
 - *primary_metric* "AUC_weighted" given we are facing an umbalanced class problem. click [here](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html) for more info.
 - *verbosity* logging.INFO to capture important events for the model experiments
@@ -43,21 +50,36 @@ Given the tabular nature of the selected dataset with categorical and numeric co
 - *task* will be "classification" because the objective is to identify attrition as a "Yes", "No" labeling problem 
 
 ### Results
-*TODO*: What are the results you got with your automated ML model? What were the parameters of the model? How could you have improved it?
 
-*TODO* Remeber to provide screenshots of the `RunDetails` widget as well as a screenshot of the best model trained with it's parameters.
+The results reported by  automl gives a Voting Ensemble model with best a *AUC_weighted* of 0.8427 (this result may vary for each automl experiment run)
+
+```
+ITERATION   PIPELINE                                DURATION      METRIC      BEST
+62    VotingEnsemble                                0:01:57       0.8427    0.8427
+```
+
+What it can be seen is that automl obtains consistently superior results compared with the ones obtained with hyperdrive, showing that there exists better approaches than DNN to model this kind of data.
+
+![automl-rundetails](images/project-3/automl-rundetails.PNG)
+
+You can inspect the experiment run in detail using azureml portal, where each of the runs is listed with their respective metric
+
+![best-automl](images/project-3/automl-best-run-id.PNG)
+
+You can find more details of the resulting automl model, such as *feature importance* in the *automl.ipynb* file.
 
 After automl is done with model/hyperparameter search, the model with the best performance metric is selected. The results obtained with automl outperforms the ones found using *hyperdrive* so, for the deployment section the automl model will be used.
 
 ## Hyperparameter Tuning
-*TODO*: What kind of model did you choose for this experiment and why? Give an overview of the types of parameters and their ranges used for the hyperparameter search
 
-Due the hyperparameter tuning section suposes a fixed model, a PyTorch DNN with 2 layers was selected. The selection of a PyTorch model was just for didactic purpose, using it as an exercise to work defining a proper Environment class along with a good sklearn preprocess estimator. This also is a wonderful moment to try a compute cluster that actually supports GPU computing. For hyperparameter optimization the following settings were selected:
+Due the hyperparameter tuning section supposes a fixed model; a PyTorch DNN with 2 hidden layers was selected. The selection of a PyTorch model was just for didactic purposes. This also is a wonderful moment to try a compute cluster that actually supports GPU computing. For hyperparameter optimization the following settings were selected:
 
-- *num_epochs* to determine the training cycles for the DNN in order to achieve the best performance and to not overfit
-- *learning_rate* is the initial learning hyperparameter in order to reduce the grandient values by a small leap factor (here, we are using Adam optimizer. This substracts importance to the search of this term but nonetheless is a useful point to start anyway)
-- *num_layer1* is for determining the neuron number the first layer of the DNN
-- *num_layer2* is to determine the second layer of the DNN neuron number
+- *num_epochs* to determine the training cycles for the DNN in order to achieve the best performance and avoid overfitting.
+- *learning_rate* is the initial learning hyperparameter in order to reduce the grandient values by a small leap factor (here, we are using Adam optimizer. This substracts importance to the search of this term but nonetheless is a useful point to start)
+- *num_layer1* is for determining the number of neurons for the first hidden layer of the DNN
+- *num_layer2* is to determine the second hidden layer of the DNN neuron number
+
+The following cell is used to log the hyperparameters mentioned above.
 
 ```python
 run.log("num_epochs", np.int(num_epochs))
@@ -66,17 +88,17 @@ run.log("num_layer1", np.int(num_layer1))
 run.log("num_layer2", np.int(num_layer2))
 ```
 
-The above cell is used to log the hyperparameters mentioned above.
-
-In terms of performance metric we are using the same that was used for the automl experiment.
+In terms of performance metric we are using the same used for the automl experiment.
 
 ```python
 run.log('best_test_acc', np.float(best_metric))
 ```
 
-The above cell reports the best metric per epoch with the label *best_test_acc*.
+The above cell logs the obtained metric per epoch with label *best_test_acc*.
 
-For hyper-parameter search, it is defined in the following code snippet. We use *BayesianParameterSampling* for parameter sampling. For this specific sampling it's not needed to define a stop policy. The default arguments are applied. Due the nature of the selected hyper-parameters to search de following ranges were selected:
+For hyper-parameter search, it is defined in the following code snippet. We use *BayesianParameterSampling* for hyperparameter search. For this specific sampling it's not needed to define a stop policy. The default arguments are applied. 
+
+Due the nature of the selected hyper-parameters to search de following ranges were selected:
 
 ```python
 param_sampling = BayesianParameterSampling({
@@ -87,32 +109,50 @@ param_sampling = BayesianParameterSampling({
 })
 ```
 
-Note that *uniform* is for uniform float distribution. For integer distributions the *choice* funtion with the *min* to *max* range is passed.
+Note that for continuous value search the *uniform* distribution distribution is used. For integer distributions the *choice* funtion with the *min* to *max* range is passed. Click [here](https://docs.microsoft.com/en-us/azure/machine-learning/how-to-tune-hyperparameters#define-the-search-space) to know more about hyperparameter model tuning.
 
 ### Results
 
 It is very important to note that some aspects of the dataset were neglected during this run, such as class imbalance. There exist many different approaches to solve this kind of problems like undersampling or oversampling methods (maybe including a specialized library for this task such as [imbalanced-learn](https://github.com/scikit-learn-contrib/imbalanced-learn)) or using a weighted loss function but for now it is not the scope of this project.
 
-The results reported by the hyperdrive run experiment were the following:
+The results reported by the hyperdrive run experiment can be inspected with following code cell:
 
-- num_epochs: 
-- learning_rate:
-- num_layer1:
-- num_layer2:
-- best_test_acc:
+```python
+print('Best Run is:\n  Validation accuracy: {} \n  Learning rate: {} \n Number epochs: {} \n Layer 1: {} \n layer 2: {}'.format(
+        best_run_metrics['best_test_acc'][-1],
+        best_run_metrics['learning_rate'],
+        best_run_metrics['num_epochs'],
+        best_run_metrics['num_layer1'],
+        best_run_metrics['num_layer2'])
+     )
+```
 
-Although the results were good the experiment was surpassed by the automl result with an *AUC_weighted* metric of **VALOR**. For that reason, the model selected for deployment will be the resulting from the automl selection process. Please inspect the *hyperparameter_tuning.ipynb* for more details.
+The following is the corresponding output:
 
-*TODO* Remeber to provide screenshots of the `RunDetails` widget as well as a screenshot of the best model trained with it's parameters.
+```
+Best Run is:
+  Validation accuracy: 0.7467482125936773 
+  Learning rate: 0.044259067927111595 
+ Number epochs: 2304 
+ Layer 1: 10 
+ layer 2: 75
+```
+
+For more details you can inspect the *hyperparameter_tuning.ipynb*.
+
+![hp-best-model](images/project-3/hyperdrive-best-model.PNG)
+
+Although the results were good the experiment was surpassed by the automl result with an *AUC_weighted* metric of **0.7467**. For that reason, the model selected for deployment will be the resulting from the automl selection process. Please inspect the *hyperparameter_tuning.ipynb* for more details.
+
+![hp-details](images/project-3/hyperdrive-rundetails.PNG)
 
 ## Model Deployment
-*TODO*: Give an overview of the deployed model and instructions on how to query the endpoint with a sample input.
 
 Once the best performing model has been selected we can move on to deploy it. This part will be present in the *automl.ipynb* due its superior result.
 
 ### Registering the model
 
-We first have to retrieve the best run/model from the AutoMLRun object. For this use use the *get_outputs()* method:
+First we have to retrieve the best run/model from the AutoMLRun object. For this, use the *get_outputs()* method:
 
 ```python
 best_automl_run, best_automl_model = remote_run.get_output()
@@ -125,6 +165,8 @@ model_name = best_automl_run.properties["model_name"]
 script_file_name = "inference/score.py"
 best_automl_run.download_file('outputs/scoring_file_v_1_0_0.py', script_file_name)
 ```
+
+In the next cell, we register and deploy the best model as an endpoint:
 
 ```python
 description = 'sample service for Automl Classification'
@@ -140,7 +182,7 @@ inference_config = InferenceConfig(entry_script=script_file_name)
 deployment_config = AciWebservice.deploy_configuration(cpu_cores=1, 
                                                        memory_gb=1,
                                                        tags={'area': "AttritionData", 'type': "automl_classification"},
-                                                       description='sample service for Automl Classification')
+                                                       description=description)
 
 # Define the model, inference, & deployment configuration and web service name and location to deploy
 service = Model.deploy(
@@ -153,15 +195,14 @@ service = Model.deploy(
 service.wait_for_deployment(show_output=True)
 ```
 
-In the second line we register the model giving as arguments some necesary data such as the model name, en optional data such as description. Next we instantiate a InferenceConfig class which combines the scoring script and the environment (if provided) with the inference configuration. For this deployment we use an Azure Container Instance passing the number of cores and memory that will be used by the inference compute instance as the model *endpoint*. We also pass some optional arguments such as *tags* and *description*.
+In the second cell line we register the model giving as arguments some necessary data such as the *model name* and optional data such as *description*. Next we instantiate an *InferenceConfig* class which combines the scoring script and the environment (if provided) with the inference configuration. For this deployment we use an Azure Container Instance (ACI) passing the number of cores and memory that will be used by the inference compute instance as the model *endpoint*. We also pass some optional arguments such as *tags* and *description*.
 
-Last, a *Model* class is instantiated and deployed passing in the model, the inference and deployment configuration along with the name of the service created. Once done we'll end up with the deployed endpoint to send some queries and try it. To see this section please refer to the last section of the *automl.ipynb* file.
+If everything goes as planned, the cell should return a healthy service endpoint. To see how the endopoint is tested please go to the *test* section of the *automl.ipynb* file.
+
+![servie-deployed](images/project-3/service-deployed.PNG)
 
 ## Screen Recording
 *TODO* Provide a link to a screen recording of the project in action. Remember that the screencast should demonstrate:
 - A working model
 - Demo of the deployed  model
 - Demo of a sample request sent to the endpoint and its response
-
-## Standout Suggestions
-*TODO (Optional):* This is where you can provide information about any standout suggestions that you have attempted.
