@@ -72,6 +72,10 @@ After automl is done with model/hyperparameter search, the model with the best p
 
 ## Hyperparameter Tuning
 
+**NOTE**: Before running the hyperdrive experiment, make sure that you have *hyperparameter_tuning.ipynb*, *dnn-score.py* and *dnn-train.py* on the same level. Otherwise, a not file found error will emerge.
+
+![documents-hd](images/project-3/project-3-documents-hd.PNG)
+
 Due the hyperparameter tuning section supposes a fixed model; a PyTorch DNN with 2 hidden layers was selected. The selection of a PyTorch model was just for didactic purposes. This also is a wonderful moment to try a compute cluster that actually supports GPU computing. For hyperparameter optimization the following settings were selected:
 
 - *num_epochs* to determine the training cycles for the DNN in order to achieve the best performance and avoid overfitting.
@@ -202,7 +206,5 @@ If everything goes as planned, the cell should return a healthy service endpoint
 ![servie-deployed](images/project-3/service-deployed.PNG)
 
 ## Screen Recording
-*TODO* Provide a link to a screen recording of the project in action. Remember that the screencast should demonstrate:
-- A working model
-- Demo of the deployed  model
-- Demo of a sample request sent to the endpoint and its response
+
+[Screencast link](https://youtu.be/Lp6bIqDVsQ4)
