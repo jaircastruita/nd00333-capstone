@@ -66,13 +66,27 @@ You can inspect the experiment run in detail using azureml portal, where each of
 
 ![best-automl](starter_file/images/project-3/automl-best-run-id.PNG)
 
+#### Best model parameters
+
+```
+min_weight_fraction_leaf=0.0,
+n_estimators=100,
+n_jobs=1,
+oob_score=False,
+random_state=None,
+verbose=0,
+warm_start=False
+```
+
+#### Best model environment
+
 You can find more details of the resulting automl model, such as *feature importance* in the *automl.ipynb* file.
 
 After automl is done with model/hyperparameter search, the model with the best performance metric is selected. The results obtained with automl outperforms the ones found using *hyperdrive* so, for the deployment section the automl model will be used.
 
 ## Hyperparameter Tuning
 
-**NOTE**: Before running the hyperdrive experiment, make sure that you have *hyperparameter_tuning.ipynb*, *dnn-score.py* and *dnn-train.py* on the same level. Otherwise, a not file found error will emerge.
+**NOTE**: Before running the hyperdrive experiment, make sure that you have *hyperparameter_tuning.ipynb*, *dnn-score.py* and *dnn-train.py* on the same level. Otherwise, a not file found error will show.
 
 ![documents-hd](starter_file/images/project-3/project-3-documents-hd.PNG)
 
@@ -204,6 +218,12 @@ In the second cell line we register the model giving as arguments some necessary
 If everything goes as planned, the cell should return a healthy service endpoint. To see how the endopoint is tested please go to the *test* section of the *automl.ipynb* file.
 
 ![servie-deployed](starter_file/images/project-3/service-deployed.PNG)
+
+## Future improvements
+
+### Automl
+
+### Hyperdrive
 
 ## Screen Recording
 
