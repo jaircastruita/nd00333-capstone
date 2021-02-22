@@ -66,17 +66,27 @@ You can inspect the experiment run in detail using azureml portal, where each of
 
 ![best-automl](starter_file/images/project-3/automl-best-run-id.PNG)
 
-#### Best model parameters
+#### Inspect best model parameters
 
+Once the best model is retrieved, you can inspect the model/hyperparameters found for better understanding. With the following line you can see the parameters found for the general ensemble model:
+
+```python
+best_automl_model.steps[1][1]
 ```
-min_weight_fraction_leaf=0.0,
-n_estimators=100,
-n_jobs=1,
-oob_score=False,
-random_state=None,
-verbose=0,
-warm_start=False
+
+For this case, the ensemble is formed by 10 different pre-fitted models.
+
+![automl-params](starter_file/images/project-3/automl-params.PNG)
+
+You can see each model weight receives at the time of inference.
+
+You can even dig further and inspect the parameter selection for each of the 10 estimators. You can see this part in more detail in the *automl.ipynb* file.
+
+```python
+best_automl_model.steps[1][1].estimators
 ```
+
+![automl-estimators](starter_file/images/project-3/automl-estimators.PNG)
 
 #### Best model environment
 
@@ -215,15 +225,27 @@ service.wait_for_deployment(show_output=True)
 
 In the second cell line we register the model giving as arguments some necessary data such as the *model name* and optional data such as *description*. Next we instantiate an *InferenceConfig* class which combines the scoring script and the environment (if provided) with the inference configuration. For this deployment we use an Azure Container Instance (ACI) passing the number of cores and memory that will be used by the inference compute instance as the model *endpoint*. We also pass some optional arguments such as *tags* and *description*.
 
+To load the best automl environment, it can be accessed in the best model run. You can either load the environment file or retrieve the enviroment object using the *get_environment* method of the best run directly. You can visit this [link](https://docs.microsoft.com/en-us/azure/machine-learning/how-to-use-environments#train-a-run-specific-environment) for more info.
+
+```python
+automl_env = best_automl_run.get_environment()
+```
+
+![automl-environment](starter_file/images/project-3/automl-environment.PNG)
+
 If everything goes as planned, the cell should return a healthy service endpoint. To see how the endopoint is tested please go to the *test* section of the *automl.ipynb* file.
 
-![servie-deployed](starter_file/images/project-3/service-deployed.PNG)
+![service-deployed](starter_file/images/project-3/service-deployed.PNG)
 
 ## Future improvements
 
 ### Automl
 
+Possibly improvements for automl could be modify the parameter *enable_dnn* to True, this will enable the entire option of neural networks to explore. Other possible improvement could be increase the timeout time. This can allow the automl model to explore bigger models either to individual use or adding them in an ensemble for better decision regions.
+
 ### Hyperdrive
+
+Just as discussed earlier, one of the main problems with this particular experiment was the class imbalance problem. One immediate approach trying to get a better metric would be to focus the DNN to an imbalanced learning loss approach. Another interesting possible solution is to use hyperdrive to permute the DNN architecture. For this particular experiment a fixed 2 hidden layer was selected. It doesn't have to be this way. using hyperdrive to explore more combinations of layers & neurons could lead to much better performance.
 
 ## Screen Recording
 
@@ -243,3 +265,7 @@ If everything goes as planned, the cell should return a healthy service endpoint
 ### Udacity project examples
 - [example 1](https://github.com/PamPijnenborg21/CapstoneProject)
 - [example 2](https://github.com/singh2010nidhi/Heart-Failure-Prediction-using-MSAzure/blob/main/hyperparameter_tuning.ipynb)
+
+### Reviews links:
+
+- [review](https://review.udacity.com/#!/reviews/2771736)
